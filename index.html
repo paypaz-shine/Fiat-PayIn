@@ -1,0 +1,1268 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Paypaz Fiat PayIn · Checkout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* ── Base (mirrors Dev/Open API/on-ramp.html checkout kit) ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans SC', "Helvetica Neue", Arial, sans-serif;
+      font-size: 14px;
+      color: #303133;
+      background: #F5F7FA;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    @media (min-width: 520px) {
+      .page { border-left: 1px solid #EBEEF5; border-right: 1px solid #EBEEF5; }
+    }
+
+    .screen { display: none; flex-direction: column; flex: 1; }
+    .screen.active { display: flex; }
+
+    /* ── Header ── */
+    .ck-header {
+      background: #fff;
+      padding: 12px 16px;
+      border-bottom: 1px solid #EBEEF5;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .back-btn {
+      width: 32px; height: 32px;
+      border: none; background: none;
+      cursor: pointer;
+      color: #606266;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .back-btn:hover { background: #F5F7FA; }
+    .header-center { flex: 1; min-width: 0; text-align: center; }
+    .header-spacer { width: 32px; flex-shrink: 0; }
+    .ck-title { font-size: 15px; font-weight: 600; color: #303133; line-height: 1.3; }
+    .ck-order-id { font-size: 11px; color: #909399; font-family: 'Inter', sans-serif; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .lang-btn {
+      font-size: 12px; color: #435DDD;
+      background: none; border: 1px solid #C7CEF5;
+      border-radius: 4px; padding: 2px 8px; line-height: 1.5;
+      cursor: pointer; white-space: nowrap;
+      transition: background .2s;
+    }
+    .lang-btn:hover { background: #ECEFFC; }
+    .timer-chip {
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+      color: #E6A23C; background: #fdf6ec; border: 1px solid #f5dab1;
+      border-radius: 4px; padding: 2px 8px;
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .timer-chip.urgent { color: #F56C6C; background: #fef0f0; border-color: #fbc4c4; }
+
+    /* ── Step Bar ── */
+    .step-bar { display: flex; align-items: center; justify-content: center; padding: 12px 20px; background: #fff; border-bottom: 1px solid #EBEEF5; }
+    .step-item { display: flex; align-items: center; gap: 6px; }
+    .step-dot { width: 24px; height: 24px; border-radius: 50%; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s, color .2s; }
+    .step-dot.done { background: #67C23A; color: #fff; }
+    .step-dot.active { background: #435DDD; color: #fff; }
+    .step-dot.pending { background: #EBEEF5; color: #909399; }
+    .step-name { font-size: 11px; color: #909399; white-space: nowrap; }
+    .step-name.active { color: #435DDD; font-weight: 600; }
+    .step-name.done { color: #67C23A; }
+    .step-line { flex: 1; height: 1px; background: #EBEEF5; margin: 0 8px; min-width: 20px; }
+    .step-line.done { background: #67C23A; }
+
+    /* ── Content / Card ── */
+    .ck-content { padding: 16px 16px 24px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .ck-card, .result-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px 0 rgba(0,0,0,.06); overflow: hidden; }
+    .card-section { padding: 14px 16px; }
+
+    .bt-amount-hero { text-align: center; padding: 20px 16px 16px; }
+    .bt-amount-label { font-size: 12px; color: #909399; margin-bottom: 6px; }
+    .bt-amount-val { font-family: 'Inter', sans-serif; font-size: 34px; font-weight: 700; color: #303133; font-variant-numeric: tabular-nums; }
+    .bt-amount-currency { font-size: 16px; font-weight: 500; color: #606266; }
+    .bt-amount-timer { display: inline-flex; align-items: center; margin-top: 10px; padding: 3px 10px; font-size: 12px; font-weight: 500; color: #909399; background: #F5F7FA; border: none; border-radius: 30px; }
+    .bt-amount-timer.urgent { color: #F56C6C; background: #fef0f0; }
+
+    .bank-card-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #EBEEF5; }
+    .bank-card-head-icon { width: 28px; height: 28px; border-radius: 8px; background: #EBF5FB; color: #2E86C1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .bank-card-head-label { font-size: 13px; font-weight: 700; color: #303133; letter-spacing: .02em; }
+
+    .bank-info-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; border-bottom: 1px solid #EBEEF5; }
+    .bank-info-row:last-child { border-bottom: none; }
+    .bank-info-label { font-size: 12px; color: #909399; flex-shrink: 0; }
+    .bank-info-value-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .bank-info-value { font-size: 13px; font-weight: 600; color: #303133; font-family: 'Inter', 'Noto Sans SC', sans-serif; text-align: right; word-break: break-all; }
+    .bank-info-value-amount { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: #303133; font-variant-numeric: tabular-nums; }
+    .bank-info-value-amount .amount-cur { font-family: 'Noto Sans SC', sans-serif; font-size: 13px; font-weight: 500; color: #606266; margin-left: 2px; }
+    .copy-icon-inline { color: #C0C4CC; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; transition: color .15s; }
+    .copy-icon-inline:hover { color: #435DDD; }
+
+    .ck-warning { display: flex; gap: 8px; background: #F5F7FA; border-radius: 6px; padding: 10px 12px; }
+    .ck-warning-text { font-size: 12px; color: #909399; line-height: 1.7; }
+    .ck-warning.accent { background: #fdf6ec; border: 1px solid #f5dab1; }
+    .ck-warning.accent .ck-warning-text { color: #B8720C; font-weight: 500; }
+    .vf-timeout-text { display: flex; align-items: center; gap: 6px; color: #F56C6C; font-size: 12px; line-height: 1.6; }
+
+    .result-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid #EBEEF5; }
+    .result-row:last-child { border-bottom: none; }
+    .result-key { font-size: 12px; color: #909399; }
+    .result-val { font-size: 13px; color: #303133; font-weight: 500; font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+
+    /* ── Processing / Status ── */
+    .centered-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 24px 32px; text-align: center; gap: 16px; }
+    .centered-screen > .result-card, .centered-screen > .ck-card { width: 100%; }
+    .spin-wrap { width: 64px; height: 64px; border-radius: 50%; background: #ECEFFC; display: flex; align-items: center; justify-content: center; position: relative; }
+    .spin-ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; border-top-color: #435DDD; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin-ring.small { border-width: 2px; }
+
+    .status-icon { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .status-icon-success { background: #f0f9eb; }
+    .status-icon-failed  { background: #fef0f0; }
+    .status-icon-pending { background: #fdf6ec; }
+    .status-icon-neutral { background: #f4f4f5; }
+    .status-title { font-size: 18px; font-weight: 600; color: #303133; }
+    .status-desc  { font-size: 13px; color: #909399; line-height: 1.8; max-width: 300px; }
+    .status-text-group { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .order-id-inline { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #909399; }
+    .order-id-inline .oid-val { font-family: 'Inter', sans-serif; font-size: 12px; color: #606266; font-weight: 600; }
+    .proc-step-row { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Buttons ── */
+    .btn-cta { width: 100%; height: 48px; background: #435DDD; color: #fff; font-size: 15px; font-weight: 600; letter-spacing: .01em; border: none; border-radius: 12px; cursor: pointer; font-family: 'Noto Sans SC', sans-serif; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-cta:hover { background: #697DE4; }
+    .btn-cta:active { background: #3C54C7; }
+    .btn-cta:disabled { background: #E8ECF0; color: #C0C4CC; cursor: not-allowed; }
+    .btn-cta.danger { background: #F56C6C; }
+    .btn-cta.danger:hover { background: #f78989; }
+    .btn-cta-ghost { width: 100%; height: 44px; background: #fff; color: #606266; font-size: 14px; font-weight: 500; border: 1px solid #DCDFE6; border-radius: 12px; cursor: pointer; font-family: 'Noto Sans SC', sans-serif; transition: background .2s, border-color .2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-cta-ghost:hover { border-color: #435DDD; color: #435DDD; }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-row .btn-cta, .btn-row .btn-cta-ghost { flex: 1; }
+    .link-btn { background: none; border: none; color: #909399; font-size: 13px; cursor: pointer; padding: 4px; font-family: 'Noto Sans SC', sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+    .link-btn:hover { color: #F56C6C; }
+
+    /* ── CFD Entry Screen (mock external CFD platform) ── */
+    .cfd-header { background: #1C2333; color: #fff; padding: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .cfd-brand { display: flex; align-items: center; gap: 8px; }
+    .cfd-brand-badge { width: 28px; height: 28px; border-radius: 8px; background: #3B4B6B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+    .cfd-brand-name { font-size: 15px; font-weight: 600; }
+    .cfd-demo-tag { font-size: 11px; color: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.25); border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
+    .cfd-header .lang-btn { color: rgba(255,255,255,.85); border-color: rgba(255,255,255,.35); }
+    .cfd-header .lang-btn:hover { background: rgba(255,255,255,.1); }
+    .cfd-account-card { background: #fff; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 2px 12px 0 rgba(0,0,0,.06); }
+    .cfd-account-label { font-size: 12px; color: #909399; }
+    .cfd-account-balance { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 700; color: #303133; }
+    .cfd-deposit-btn { background: #1C2333; }
+    .cfd-deposit-btn:hover { background: #2b3550; }
+    .cfd-footnote { font-size: 11px; color: #909399; line-height: 1.6; text-align: center; }
+    .cr-body { padding: 16px 16px 24px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+    .cr-block { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1.5px solid #E8ECF0; transition: border-color .2s, box-shadow .2s; }
+    .cr-block:focus-within { border-color: #435DDD; box-shadow: 0 0 0 3px rgba(67,93,221,.10); }
+    .cr-block-label { font-size: 11px; color: #909399; margin-bottom: 6px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; }
+    .cr-block-row { display: flex; align-items: center; gap: 10px; }
+    .cr-input { font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 700; color: #303133; border: none; background: none; outline: none; flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+    .cr-input::placeholder { color: #D0D5DD; }
+    .cr-input::-webkit-outer-spin-button, .cr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .cr-input[type="number"] { -moz-appearance: textfield; }
+    .cr-block-primary { border-color: #F0F2F5; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 2px 8px rgba(16,24,40,.05); }
+    .cr-block-primary:focus-within { border-color: #F0F2F5; box-shadow: 0 0 0 3px rgba(67,93,221,.12), 0 2px 8px rgba(16,24,40,.05); }
+    .cr-block-primary .cr-block-label { color: #435DDD; }
+    .cr-block-primary .cr-input { font-size: 30px; letter-spacing: -0.02em; }
+    .cr-currency-btn { display: flex; align-items: center; gap: 5px; background: #F5F7FA; border: none; border-radius: 24px; padding: 7px 10px 7px 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: #303133; flex-shrink: 0; transition: background .15s; }
+    .cr-currency-btn:hover { background: #EBEEF5; }
+    .cr-currency-badge { display: flex; align-items: center; background: #F5F7FA; border-radius: 24px; padding: 7px 12px; font-size: 14px; font-weight: 600; color: #303133; flex-shrink: 0; }
+    .cr-block-hint { margin-top: 5px; font-size: 11px; color: #C0C4CC; display: flex; align-items: center; justify-content: space-between; }
+    .cr-block-hint.is-error { color: #F56C6C; }
+
+    /* ── Dropdown sheet (currency picker) ── */
+    .cr-dropdown-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; display: none; align-items: flex-end; justify-content: center; }
+    .cr-dropdown-overlay.show { display: flex; }
+    .cr-dropdown-sheet { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; margin: 0 auto; padding: 20px 16px 36px; }
+    .cr-dropdown-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #EBEEF5; }
+    .cr-option { display: flex; align-items: center; gap: 12px; padding: 12px 8px; cursor: pointer; border-radius: 12px; transition: background .15s; }
+    .cr-option:hover { background: #F5F7FA; }
+    .cr-option.selected { background: #ECEFFC; }
+    .cr-option-name { font-size: 15px; font-weight: 500; color: #303133; flex: 1; }
+    .cr-option-check { color: #435DDD; }
+    .bc-input { height: 40px; border: 1px solid #DCDFE6; border-radius: 8px; padding: 0 12px; font-size: 14px; font-family: 'Inter', sans-serif; color: #303133; outline: none; background: #fff; transition: border-color .15s; width: 100%; }
+    .bc-input:focus { border-color: #435DDD; }
+    .bc-label { font-size: 13px; font-weight: 700; color: #303133; margin-bottom: 6px; padding-left: 16px; display: block; }
+
+    /* ── Upload zone ── */
+    .upload-zone { border: 1.5px dashed #DCDFE6; border-radius: 12px; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: border-color .15s, background .15s; text-align: center; }
+    .upload-zone:hover { border-color: #435DDD; background: #F9FAFF; }
+    .upload-zone-icon { width: 40px; height: 40px; border-radius: 50%; background: #ECEFFC; color: #435DDD; display: flex; align-items: center; justify-content: center; }
+    .upload-zone-text { font-size: 13px; color: #606266; font-weight: 500; }
+    .upload-zone-hint { font-size: 11px; color: #C0C4CC; }
+    .upload-file-chip { display: none; align-items: center; gap: 10px; background: #fff; border: 1px solid #E8ECF0; border-radius: 12px; padding: 10px 12px; }
+    .upload-file-chip.show { display: flex; }
+    .upload-file-chip .upload-zone { display: none; }
+    .upload-file-icon { width: 34px; height: 34px; border-radius: 8px; background: #f0f9eb; color: #67C23A; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .upload-file-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .upload-file-name { font-size: 13px; font-weight: 500; color: #303133; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .upload-file-sub { font-size: 11px; color: #909399; }
+    .upload-file-remove { color: #C0C4CC; cursor: pointer; flex-shrink: 0; display: flex; padding: 4px; transition: color .15s; }
+    .upload-file-remove:hover { color: #F56C6C; }
+    .upload-wrap.has-file .upload-zone { display: none; }
+
+    /* ── Demo outcome selector (prototype-only helper, styled to stand apart) ── */
+    .demo-box { border: 1.5px dashed #C7CEF5; background: #F9FAFF; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .demo-btn-row { display: flex; gap: 6px; }
+    .demo-btn-row .btn-cta-ghost { flex: 1; height: 32px; font-size: 12px; border-radius: 8px; }
+    .demo-box-label { font-size: 11px; font-weight: 600; color: #435DDD; letter-spacing: .03em; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+
+    /* ── Confirm dialog ── */
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 70; display: none; align-items: center; justify-content: center; padding: 24px; }
+    .confirm-overlay.show { display: flex; }
+    .confirm-dialog { background: #fff; border-radius: 14px; padding: 24px 20px 20px; width: 100%; max-width: 300px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+    .confirm-icon { width: 52px; height: 52px; border-radius: 50%; background: #fef0f0; color: #F56C6C; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+    .confirm-title { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 6px; }
+    .confirm-desc { font-size: 13px; color: #909399; line-height: 1.7; margin-bottom: 20px; }
+    .confirm-choices { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%) translateY(-12px); background: rgba(0,0,0,.72); color: #fff; font-size: 13px; padding: 8px 18px; border-radius: 20px; white-space: nowrap; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .mini-order-id { font-family: 'Inter', sans-serif; font-size: 12px; color: #C0C4CC; }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+<!-- ══════════════════════════════════════════
+     SCREEN -1 · CFD 商户后台入金入口（模拟外部平台，功能点：发起入金申请）
+══════════════════════════════════════════ -->
+<div id="s-cfd-entry" class="screen active">
+
+  <div class="cfd-header">
+    <div class="cfd-brand">
+      <div class="cfd-brand-badge">FX</div>
+      <span class="cfd-brand-name">Demo CFD</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="cfd-demo-tag" id="t-cfd-demo-tag">External Platform (Demo)</span>
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="cr-body">
+
+    <div class="cfd-account-card">
+      <div class="cfd-account-label" id="t-cfd-account-label">Trading Account Balance</div>
+      <div class="cfd-account-balance">$4,230.50</div>
+    </div>
+
+    <div class="cr-block cr-block-primary">
+      <div class="cr-block-label" id="t-cfd-amount-label">DEPOSIT AMOUNT</div>
+      <div class="cr-block-row">
+        <input class="cr-input" id="cfd-amount-input" type="number" min="200000" max="500000" step="1" placeholder="0" value="300000" autocomplete="off" oninput="validateCfdAmount()">
+        <span class="cr-currency-badge" id="cfd-fiat-code">CNY</span>
+      </div>
+      <div class="cr-block-hint" id="cfd-amount-hint-wrap"><span id="t-cfd-amount-hint">Amount range 200,000 - 500,000</span></div>
+    </div>
+
+    <button class="btn-cta cfd-deposit-btn" id="cfd-deposit-btn" onclick="onCfdDeposit()">
+      <span id="t-cfd-deposit-btn">Deposit</span>
+      <i data-lucide="arrow-right" width="16" height="16"></i>
+    </button>
+
+    <div class="cfd-footnote" id="t-cfd-footnote">You'll be redirected to PayPaz to complete this deposit.</div>
+
+    <div class="demo-box" style="width:100%">
+      <div class="demo-box-label"><i data-lucide="flask-conical" width="12" height="12"></i><span id="t-cfd-fail-demo-label">Prototype demo — simulate deposit request result</span></div>
+      <select class="bc-input" id="cfd-fail-demo-select">
+        <option value="pass" selected id="t-cfd-fail-demo-pass">Verification passed</option>
+        <option value="duplicate" id="t-cfd-fail-demo-duplicate">Duplicate order</option>
+        <option value="mismatch" id="t-cfd-fail-demo-mismatch">No matching card</option>
+        <option value="timeWindow" id="t-cfd-fail-demo-time">Outside service hours</option>
+        <option value="slotFull" id="t-cfd-fail-demo-slot">Time-slot quota full</option>
+        <option value="quota" id="t-cfd-fail-demo-quota">Merchant quota unavailable</option>
+        <option value="cardStatus" id="t-cfd-fail-demo-cardstatus">Card status abnormal</option>
+        <option value="merchantDisabled" id="t-cfd-fail-demo-merchant">Merchant fiat deposit not enabled</option>
+        <option value="invalidLink" id="t-cfd-fail-demo-invalid">Invalid cashier link</option>
+      </select>
+    </div>
+
+  </div>
+
+</div><!-- /s-cfd-entry -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 0 · 收银台托管页面（功能点：查看收银台并线下转账）
+══════════════════════════════════════════ -->
+<div id="s-checkout" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-ck-title">法币入金</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()" id="checkout-lang-btn">EN</button>
+    </div>
+  </div>
+
+  <div class="ck-content">
+
+    <div class="ck-card">
+      <div class="bank-card-head">
+        <span class="bank-card-head-label" id="t-ck-order-head">Order Details</span>
+      </div>
+      <div class="bank-info-row">
+        <span class="bank-info-label" id="t-ck-amount-label">Amount Due</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value-amount">300,000.00 <span class="amount-cur" id="ck-amount-code">CNY</span></span>
+        </div>
+      </div>
+      <div class="bank-info-row">
+        <span class="bank-info-label" id="t-ck-remaining-label">Time Remaining</span>
+        <div class="bank-info-value-wrap"><span class="timer-chip" id="ck-timer">29:58</span></div>
+      </div>
+      <div class="bank-info-row">
+        <span class="bank-info-label" id="t-ck-order-id-label">Order No.</span>
+        <div class="bank-info-value-wrap"><span class="bank-info-value">PZPI20260916-00231</span></div>
+      </div>
+    </div>
+
+    <div class="ck-card">
+      <div class="bank-card-head">
+        <span class="bank-card-head-label" id="t-ck-bank-head">Payment Account Details</span>
+      </div>
+      <div class="bank-info-row">
+        <span class="bank-info-label" id="t-ck-card-no-label">Card Number</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">6222 0212 0001 2345 678</span>
+          <span class="copy-icon-inline" onclick="copyText('6222021200012345678')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="bank-info-row">
+        <span class="bank-info-label" id="t-ck-account-name-label">Account Name</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">上海XX贸易有限公司</span>
+          <span class="copy-icon-inline" onclick="copyText('上海XX贸易有限公司')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="bank-info-row">
+        <span class="bank-info-label" id="t-ck-bank-name-label">Bank</span>
+        <div class="bank-info-value-wrap"><span class="bank-info-value">中国工商银行</span></div>
+      </div>
+    </div>
+
+    <div>
+      <label class="bc-label" id="t-cp-upload-label">Payment Proof</label>
+      <div class="upload-wrap" id="proof-upload-wrap">
+        <div class="upload-zone" onclick="document.getElementById('proof-file-input').click()">
+          <div class="upload-zone-icon"><i data-lucide="upload" width="18" height="18"></i></div>
+          <div class="upload-zone-text" id="t-cp-upload-cta">Tap to select a screenshot or receipt</div>
+          <div class="upload-zone-hint" id="t-cp-upload-hint">JPG, JPEG, PNG, HEIC, WEBP or PDF, up to 10MB</div>
+        </div>
+        <div class="upload-file-chip" id="proof-file-chip">
+          <div class="upload-file-icon"><i data-lucide="file-check-2" width="17" height="17"></i></div>
+          <div class="upload-file-info">
+            <div class="upload-file-name" id="proof-file-name">receipt.jpg</div>
+            <div class="upload-file-sub" id="t-cp-upload-selected">Selected</div>
+          </div>
+          <div class="upload-file-remove" onclick="clearProofFile(event)"><i data-lucide="x" width="16" height="16"></i></div>
+        </div>
+        <input type="file" id="proof-file-input" accept=".jpg,.jpeg,.png,.heic,.webp,.pdf" style="display:none" onchange="onProofFileChange(this)">
+      </div>
+    </div>
+
+    <div class="ck-warning">
+      <div>
+        <div class="ck-warning-text" id="t-ck-window-warning">Complete the transfer within the window below, or the order is cancelled automatically.</div>
+        <div class="ck-warning-text" id="t-ck-remark-warning" style="margin-top:4px">No remark when transferring. Bank transfer only, from your own account — no cash, Alipay or WeChat Pay.</div>
+      </div>
+    </div>
+
+    <button class="btn-cta" id="ck-confirm-btn" onclick="onSubmitProof()" disabled>
+      <span id="t-ck-confirm-btn">I've Completed the Transfer</span>
+    </button>
+
+    <div class="demo-box" style="width:100%">
+      <div class="demo-box-label"><i data-lucide="flask-conical" width="12" height="12"></i><span id="t-ck-upload-demo-label">Prototype demo — simulate upload error</span></div>
+      <div class="demo-btn-row">
+        <button class="btn-cta-ghost" onclick="simulateUploadError('format')"><span id="t-ck-upload-demo-format">Unsupported format</span></button>
+        <button class="btn-cta-ghost" onclick="simulateUploadError('size')"><span id="t-ck-upload-demo-size">Over 10MB</span></button>
+        <button class="btn-cta-ghost" onclick="simulateUploadError('fail')"><span id="t-ck-upload-demo-fail">Upload failed</span></button>
+      </div>
+    </div>
+
+    <div class="demo-box" style="width:100%">
+      <div class="demo-box-label"><i data-lucide="flask-conical" width="12" height="12"></i><span id="t-ck-demo-label">Prototype demo — simulate outcome</span></div>
+      <button class="btn-cta-ghost" style="height:36px" onclick="goTo('cancelled')"><span id="t-ck-demo-cancelled">Simulate Order Cancelled (Timeout)</span></button>
+    </div>
+
+  </div>
+</div><!-- /s-checkout -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 2 · 等待卡商核验（含 demo 结果模拟）
+══════════════════════════════════════════ -->
+<div id="s-verifying" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-vf-title">Processing</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="centered-screen">
+    <div class="spin-wrap" id="vf-spin-icon">
+      <div class="spin-ring"></div>
+      <i data-lucide="search" width="24" height="24" style="color:#435DDD"></i>
+    </div>
+    <div class="status-icon status-icon-failed" id="vf-timeout-icon" style="display:none">
+      <i data-lucide="clock" width="32" height="32" style="color:#F56C6C"></i>
+    </div>
+    <div class="status-text-group">
+      <div class="status-title" id="t-vf-heading">Processing</div>
+      <div class="order-id-inline" id="vf-merchant-timer-row">
+        <span id="t-vf-merchant-timer-label">Estimated Processing Time</span>
+        <span class="timer-chip" id="vf-merchant-timer">30:00</span>
+      </div>
+    </div>
+
+    <div class="vf-timeout-text" id="vf-timeout-warning" style="display:none">
+      <i data-lucide="alert-triangle" width="14" height="14" style="flex-shrink:0"></i>
+      <span id="t-vf-timeout-warning">Processing has timed out. Please contact customer support.</span>
+    </div>
+
+    <div class="result-card" style="width:100%">
+      <div class="result-row">
+        <span class="result-key" id="t-vf-res-amount">Amount</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">300,000.00 <span id="vf-amount-code">CNY</span></span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-vf-order-label">Order ID</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">PZPI20260916-00231</span>
+          <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-vf-res-card">Card Number</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">6222 0212 0001 2345 678</span>
+          <span class="copy-icon-inline" onclick="copyText('6222021200012345678')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-vf-res-account-name">Account Name</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">上海XX贸易有限公司</span>
+          <span class="copy-icon-inline" onclick="copyText('上海XX贸易有限公司')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-vf-res-bank">Bank</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">中国工商银行</span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已超时状态才展示「返回商户」（PRD 4.2 查看订单状态） -->
+    <button class="btn-cta" id="vf-return-btn" style="display:none" onclick="goTo('cfd-entry')">
+      <span id="t-vf-return">Return to Merchant</span>
+    </button>
+
+    <div class="demo-box" style="width:100%">
+      <div class="demo-box-label"><i data-lucide="flask-conical" width="12" height="12"></i><span id="t-demo-label">Prototype demo — simulate outcome</span></div>
+      <select class="bc-input" id="vf-demo-select">
+        <option value="success" id="t-vf-demo-success">Verified — funds received</option>
+        <option value="refunded" id="t-vf-demo-refunded">Verification failed — refunded</option>
+        <option value="failed" id="t-vf-demo-failed">Funds not received — failed</option>
+        <option value="timeout" id="t-vf-demo-timeout">Merchant hasn't confirmed in time</option>
+      </select>
+      <button class="btn-cta" style="height:40px" onclick="onVerifyDemoAdvance()"><span id="t-vf-demo-advance">Simulate Result</span></button>
+    </div>
+  </div>
+</div><!-- /s-verifying -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 5 · 入金成功
+══════════════════════════════════════════ -->
+<div id="s-success" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-suc-title">Successful</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="centered-screen">
+    <div class="status-icon status-icon-success">
+      <i data-lucide="check-circle-2" width="36" height="36" style="color:#67C23A"></i>
+    </div>
+    <div class="status-text-group">
+      <div class="status-title" id="t-suc-heading">Successful</div>
+      <div class="status-desc" id="t-suc-desc">Funds confirmed. If you have any questions, please contact customer support.</div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-row">
+        <span class="result-key" id="t-res-amount">Amount</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value" style="color:#67C23A">300,000.00 <span id="res-amount-code">CNY</span></span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-card">Card Number</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">6222 0212 0001 2345 678</span>
+          <span class="copy-icon-inline" onclick="copyText('6222021200012345678')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-account-name">Account Name</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">上海XX贸易有限公司</span>
+          <span class="copy-icon-inline" onclick="copyText('上海XX贸易有限公司')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-bank">Bank</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">中国工商银行</span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-order">Order ID</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">PZPI20260916-00231</span>
+          <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-time">Completed</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value" style="font-size:12px">2026-09-16 15:42:08</span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-cta" onclick="goTo('cfd-entry')">
+      <span id="t-suc-return">Return to Merchant</span>
+    </button>
+  </div>
+</div><!-- /s-success -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 6 · 已退款
+══════════════════════════════════════════ -->
+<div id="s-refunded" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-rf-title">Refunded</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="centered-screen">
+    <div class="status-icon status-icon-neutral">
+      <i data-lucide="rotate-ccw" width="32" height="32" style="color:#909399"></i>
+    </div>
+    <div class="status-text-group">
+      <div class="status-title" id="t-rf-heading">Refunded</div>
+      <div class="status-desc" id="t-rf-desc">This transfer didn't meet the service provider's requirements and has been refunded via the original transfer — please check.</div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-row">
+        <span class="result-key" id="t-res-rf-amount">Refund Amount</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value" style="color:#909399">300,000.00 <span id="rf-amount-code">CNY</span></span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-rf-order">Order ID</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">PZPI20260916-00231</span>
+          <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-rf-time">Refunded At</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value" style="font-size:12px">2026-09-16 15:52:08</span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-cta" onclick="goTo('cfd-entry')">
+      <span id="t-rf-return">Return to Merchant</span>
+    </button>
+  </div>
+</div><!-- /s-refunded -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 6b · 失败（申诉裁定资金未到账）
+══════════════════════════════════════════ -->
+<div id="s-failed" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-fl-title">Failed</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="centered-screen">
+    <div class="status-icon status-icon-failed">
+      <i data-lucide="x-circle" width="32" height="32" style="color:#F56C6C"></i>
+    </div>
+    <div class="status-text-group">
+      <div class="status-title" id="t-fl-heading">Failed</div>
+      <div class="status-desc" id="t-fl-desc">We couldn't confirm your payment and the order has been closed. Please start a new deposit; if you have already paid, please contact customer support.</div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-row">
+        <span class="result-key" id="t-res-fl-amount">Amount</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">300,000.00 <span id="fl-amount-code">CNY</span></span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-fl-order">Order ID</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">PZPI20260916-00231</span>
+          <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-fl-time">Failed At</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value" style="font-size:12px">2026-09-16 18:20:15</span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-cta" onclick="goTo('cfd-entry')">
+      <span id="t-fl-return">Return to Merchant</span>
+    </button>
+  </div>
+</div><!-- /s-failed -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 7 · 已取消
+══════════════════════════════════════════ -->
+<div id="s-cancelled" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-cn-title">Order Cancelled</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="centered-screen">
+    <div class="status-icon status-icon-neutral">
+      <i data-lucide="x-circle" width="32" height="32" style="color:#909399"></i>
+    </div>
+    <div class="status-text-group">
+      <div class="status-title" id="t-cn-heading">Order Cancelled</div>
+      <div class="status-desc" id="t-cn-desc">This order is cancelled. No funds were charged.</div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-row">
+        <span class="result-key" id="t-res-cn-amount">Amount</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">300,000.00 <span id="cn-amount-code">CNY</span></span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-cn-order">Order ID</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value">PZPI20260916-00231</span>
+          <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="result-key" id="t-res-cn-time">Cancelled At</span>
+        <div class="bank-info-value-wrap">
+          <span class="bank-info-value" style="font-size:12px">2026-09-16 15:58:00</span>
+          <span class="copy-icon-inline" style="visibility:hidden"><i data-lucide="copy" width="13" height="13"></i></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-cta" onclick="goTo('cfd-entry')">
+      <span id="t-cn-return">Return to Merchant</span>
+    </button>
+  </div>
+</div><!-- /s-cancelled -->
+
+
+<!-- ══════════════════════════════════════════
+     SCREEN 8 · 链接无效（签名校验失败 / 订单不存在）
+     不展示订单信息，不提供「返回商户」按钮（无法确认可信的 returnUrl）
+══════════════════════════════════════════ -->
+<div id="s-invalid-link" class="screen">
+
+  <div class="ck-header">
+    <div class="header-spacer"></div>
+    <div class="header-center">
+      <div class="ck-title" id="t-il-title">Invalid Link</div>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" onclick="toggleLang()">中文</button>
+    </div>
+  </div>
+
+  <div class="centered-screen">
+    <div class="status-icon status-icon-neutral">
+      <i data-lucide="alert-triangle" width="32" height="32" style="color:#909399"></i>
+    </div>
+    <div class="status-text-group">
+      <div class="status-title" id="t-il-heading">Invalid Link</div>
+      <div class="status-desc" id="t-il-desc">This link is invalid. Please return to the merchant and start again.</div>
+    </div>
+
+    <!-- 跳转 CFD 商户在接口中传入的 returnUrl（PRD 4.2 链接无效页） -->
+    <button class="btn-cta" onclick="goTo('cfd-entry')">
+      <span id="t-il-return">Return to Merchant</span>
+    </button>
+  </div>
+</div><!-- /s-invalid-link -->
+
+
+</div><!-- /.page -->
+
+<!-- Order-fail demo dialog (CFD entry, 功能点：下单失败告知) -->
+<div class="confirm-overlay" id="order-fail-overlay" onclick="closeOrderFailDialog(event)">
+  <div class="confirm-dialog">
+    <div class="confirm-icon"><i data-lucide="x-circle" width="24" height="24"></i></div>
+    <div class="confirm-title" id="t-of-dialog-title">Deposit Request Failed</div>
+    <div class="confirm-desc" id="of-dialog-desc"></div>
+    <div class="confirm-choices">
+      <button class="btn-cta" onclick="closeOrderFailDialog()"><span id="t-of-dialog-ok">Got It</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────
+const I18N = {
+  en: {
+    langBtn: '中文',
+    'cfd-demo-tag': 'External Platform (Demo)',
+    'cfd-account-label': 'Trading Account Balance',
+    'cfd-amount-label': 'DEPOSIT AMOUNT',
+    'cfd-amount-hint': 'Amount range 200,000 - 500,000',
+    'cfd-deposit-btn': 'Deposit',
+    'cfd-footnote': 'You\'ll be redirected to PayPaz to complete this deposit.',
+    'cfd-fail-demo-label': 'Prototype demo — simulate deposit request result',
+    'cfd-fail-demo-pass': 'Verification passed',
+    'cfd-fail-demo-duplicate': 'Duplicate order',
+    'cfd-fail-demo-mismatch': 'No matching card',
+    'cfd-fail-demo-time': 'Outside service hours',
+    'cfd-fail-demo-quota': 'Insufficient provider token balance',
+    'cfd-fail-demo-cardstatus': 'Card status abnormal',
+    'of-dialog-title': 'Deposit Request Failed',
+    'of-dialog-ok': 'Got It',
+    'ck-title': 'Fiat Deposit',
+    'ck-window-warning': 'Please complete the transfer as soon as possible — the order will be cancelled automatically if it times out.',
+    'ck-amount-label': 'Amount Due',
+    'ck-remaining-label': 'Time Remaining',
+    'ck-order-id-label': 'Order No.',
+    'ck-order-head': 'Order Details',
+    'ck-bank-head': 'Payment Account',
+    'ck-bank-name-label': 'Bank',
+    'ck-card-no-label': 'Card Number',
+    'ck-account-name-label': 'Account Name',
+    'ck-order-ref-label': 'Order Reference',
+    'ck-remark-warning': 'No remark when transferring. Bank transfer only, from your own account — no cash, Alipay or WeChat Pay.',
+    'ck-confirm-btn': 'I\'ve Completed the Transfer',
+    'cp-title': 'Confirm Payment',
+    'cp-amount-label': 'Amount',
+    'cp-card-label': 'Paid To',
+    'cp-upload-label': 'Payment Proof',
+    'cp-upload-cta': 'Tap to select a screenshot or receipt',
+    'cp-upload-hint': 'JPG, JPEG, PNG, HEIC, WEBP or PDF, up to 10MB',
+    'cp-upload-selected': 'Selected',
+    'cp-submit-btn': 'Submit',
+    'vf-title': 'Processing',
+    'vf-heading': 'Processing',
+    'vf-heading-timeout': 'Timed Out',
+    'vf-res-amount': 'Amount',
+    'vf-order-label': 'Order ID',
+    'vf-res-card': 'Card Number',
+    'vf-res-account-name': 'Account Name',
+    'vf-res-bank': 'Bank',
+    'vf-merchant-timer-label': 'Estimated Processing Time',
+    'vf-timeout-warning': 'Processing has timed out. Please contact customer support.',
+    'vf-return': 'Return to Merchant',
+    'demo-label': 'Prototype demo — simulate outcome (live page polls status every 10s)',
+    'demo-label2': 'Prototype demo — simulate outcome',
+    'vf-demo-success': 'Verified — funds received',
+    'vf-demo-refunded': 'Verification failed — refunded',
+    'vf-demo-advance': 'Simulate Result',
+    'vf-demo-timeout': 'Merchant hasn\'t confirmed in time',
+    'vf-demo-failed': 'Funds not received — failed',
+    'suc-title': 'Successful',
+    'suc-heading': 'Successful',
+    'suc-desc': 'Funds confirmed. If you have any questions, please contact customer support.',
+    'res-amount': 'Amount',
+    'res-card': 'Card Number',
+    'res-account-name': 'Account Name',
+    'res-bank': 'Bank',
+    'res-order': 'Order ID',
+    'res-time': 'Completed',
+    'suc-return': 'Return to Merchant',
+    'rf-title': 'Refunded',
+    'rf-heading': 'Refunded',
+    'rf-desc': 'This transfer didn\'t meet the service provider\'s requirements and has been refunded via the original transfer — please check.',
+    'res-rf-amount': 'Refund Amount',
+    'res-rf-order': 'Order ID',
+    'res-rf-time': 'Refunded At',
+    'rf-return': 'Return to Merchant',
+    'cn-title': 'Order Cancelled',
+    'cn-heading': 'Cancelled',
+    'cn-desc': 'This order is cancelled — please don\'t transfer any more funds. If you have any questions, please contact customer support.',
+    'res-cn-amount': 'Amount',
+    'res-cn-order': 'Order ID',
+    'res-cn-time': 'Cancelled At',
+    'cn-return': 'Return to Merchant',
+    'cfd-fail-demo-invalid': 'Invalid cashier link',
+    'ck-upload-demo-label': 'Prototype demo — simulate upload error',
+    'ck-upload-demo-format': 'Unsupported format',
+    'ck-upload-demo-size': 'Over 10MB',
+    'ck-upload-demo-fail': 'Upload failed',
+    'fl-title': 'Failed',
+    'fl-heading': 'Failed',
+    'fl-desc': 'We couldn\'t confirm your payment and the order has been closed. Please start a new deposit; if you have already paid, please contact customer support.',
+    'res-fl-amount': 'Amount',
+    'res-fl-order': 'Order ID',
+    'res-fl-time': 'Failed At',
+    'fl-return': 'Return to Merchant',
+    'cfd-fail-demo-slot': 'Time-slot quota full',
+    'cfd-fail-demo-merchant': 'Merchant fiat deposit not enabled',
+    'il-title': 'Invalid Link',
+    'il-heading': 'Invalid Link',
+    'il-desc': 'This link is invalid. Please return to the merchant and start again.',
+    'il-return': 'Return to Merchant',
+  },
+  zh: {
+    langBtn: 'EN',
+    'cfd-demo-tag': '外部平台模拟',
+    'cfd-account-label': '交易账户余额',
+    'cfd-amount-label': '入金金额',
+    'cfd-amount-hint': '入金范围 200,000 - 500,000',
+    'cfd-deposit-btn': '发起入金',
+    'cfd-footnote': '提交后将跳转至 PayPaz 完成入金。',
+    'cfd-fail-demo-label': '原型演示 · 模拟发起入金结果',
+    'cfd-fail-demo-pass': '验证通过',
+    'cfd-fail-demo-duplicate': '重复下单',
+    'cfd-fail-demo-mismatch': '资质不匹配（未匹配到可用收款卡）',
+    'cfd-fail-demo-time': '时间窗口不满足',
+    'cfd-fail-demo-quota': '卡商代币余额不足',
+    'cfd-fail-demo-cardstatus': '卡状态异常',
+    'of-dialog-title': '下单失败',
+    'of-dialog-ok': '知道了',
+    'ck-title': '法币入金',
+    'ck-window-warning': '请尽快完成转账，超时自动取消订单。',
+    'ck-amount-label': '应付金额',
+    'ck-remaining-label': '剩余时间',
+    'ck-order-id-label': '订单号',
+    'ck-order-head': '订单信息',
+    'ck-bank-head': '收款账户',
+    'ck-bank-name-label': '开户银行',
+    'ck-card-no-label': '卡号',
+    'ck-account-name-label': '账户名',
+    'ck-order-ref-label': '订单号',
+    'ck-remark-warning': '转账时请勿填写备注。仅支持本人银行卡转账，不接受现金、支付宝或微信。',
+    'ck-confirm-btn': '我已完成转账',
+    'cp-title': '确认已付款',
+    'cp-amount-label': '金额',
+    'cp-card-label': '收款卡号',
+    'cp-upload-label': '付款凭证',
+    'cp-upload-cta': '点击选择转账截图或回单',
+    'cp-upload-hint': '支持 JPG、JPEG、PNG、HEIC、WEBP 或 PDF，10MB 以内',
+    'cp-upload-selected': '已选择',
+    'cp-submit-btn': '提交',
+    'vf-title': '处理中',
+    'vf-heading': '处理中',
+    'vf-heading-timeout': '已超时',
+    'vf-res-amount': '金额',
+    'vf-order-label': '订单号',
+    'vf-res-card': '卡号',
+    'vf-res-account-name': '账户名',
+    'vf-res-bank': '开户银行',
+    'vf-merchant-timer-label': '预计处理时间',
+    'vf-timeout-warning': '处理已超时，请联系客服',
+    'vf-return': '返回商户',
+    'demo-label': '原型演示 · 模拟结果（线上页面每 10 秒自动查询状态并跳转）',
+    'demo-label2': '原型演示 · 模拟结果',
+    'vf-demo-success': '核验通过，已到账',
+    'vf-demo-refunded': '核验不通过，已退款',
+    'vf-demo-advance': '模拟推进结果',
+    'vf-demo-timeout': '商家超时未处理',
+    'vf-demo-failed': '裁定资金未到账，失败',
+    'suc-title': '成功',
+    'suc-heading': '成功',
+    'suc-desc': '资金已确认到账，如有疑问请联系客服。',
+    'res-amount': '金额',
+    'res-card': '卡号',
+    'res-account-name': '账户名',
+    'res-bank': '开户银行',
+    'res-order': '订单号',
+    'res-time': '完成时间',
+    'suc-return': '返回商户',
+    'rf-title': '已退款',
+    'rf-heading': '已退款',
+    'rf-desc': '不符合服务商要求，已原路退款，请查收。',
+    'res-rf-amount': '退款金额',
+    'res-rf-order': '订单号',
+    'res-rf-time': '退款时间',
+    'rf-return': '返回商户',
+    'cn-title': '订单已取消',
+    'cn-heading': '已取消',
+    'cn-desc': '订单已取消，请勿再转账，如有疑问请联系客服。',
+    'res-cn-amount': '金额',
+    'res-cn-order': '订单号',
+    'res-cn-time': '取消时间',
+    'cn-return': '返回商户',
+    'cfd-fail-demo-invalid': '收银台链接无效（签名校验失败 / 订单不存在）',
+    'ck-upload-demo-label': '原型演示 · 模拟上传报错',
+    'ck-upload-demo-format': '格式不支持',
+    'ck-upload-demo-size': '超过 10MB',
+    'ck-upload-demo-fail': '上传失败',
+    'fl-title': '失败',
+    'fl-heading': '失败',
+    'fl-desc': '未确认到您的付款，订单已关闭，请重新发起入金；如已付款请联系客服。',
+    'res-fl-amount': '金额',
+    'res-fl-order': '订单号',
+    'res-fl-time': '失败时间',
+    'fl-return': '返回商户',
+    'cfd-fail-demo-slot': '时段额度已满',
+    'cfd-fail-demo-merchant': '商户未开通法币收款',
+    'il-title': '链接无效',
+    'il-heading': '链接无效',
+    'il-desc': '链接无效，请返回商户重新发起。',
+    'il-return': '返回商户',
+  },
+};
+let lang = /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+
+function renderIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function applyLang() {
+  const t = I18N[lang];
+  Object.keys(t).forEach(k => {
+    const el = document.getElementById('t-' + k);
+    if (el) el.textContent = t[k];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.textContent = t.langBtn);
+  syncVerifyHeading();
+}
+function syncVerifyHeading() {
+  const t = I18N[lang];
+  document.getElementById('t-vf-heading').textContent = merchantTimedOut ? t['vf-heading-timeout'] : t['vf-heading'];
+  document.getElementById('vf-spin-icon').style.display = merchantTimedOut ? 'none' : 'flex';
+  document.getElementById('vf-timeout-icon').style.display = merchantTimedOut ? 'flex' : 'none';
+}
+
+const LANG_CYCLE = { en: 'zh', zh: 'en' };
+function toggleLang() {
+  lang = LANG_CYCLE[lang];
+  applyLang();
+  validateCfdAmount();
+}
+
+// ── Screen Navigation ────────────────────────────────────────────────
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'verifying') resetMerchantTimer();
+}
+
+// ── Screen -1: CFD entry ─────────────────────────────────────────────
+// 本期仅支持 CNY，入金金额范围 200,000 - 500,000（平台级前端校验；
+// 实际能否下单成功仍取决于是否匹配到满足条件的收款卡，见 PRD 4.1 发起入金申请）
+function validateCfdAmount() {
+  const input = document.getElementById('cfd-amount-input');
+  const val = Number(input.value);
+  const valid = Number.isInteger(val) && val >= 200000 && val <= 500000;
+  const hintWrap = document.getElementById('cfd-amount-hint-wrap');
+  const hintText = document.getElementById('t-cfd-amount-hint');
+  const btn = document.getElementById('cfd-deposit-btn');
+  hintWrap.classList.toggle('is-error', !valid);
+  hintText.textContent = valid
+    ? I18N[lang]['cfd-amount-hint']
+    : (lang === 'zh' ? '入金金额需为 200,000 - 500,000 CNY 之间的整数' : 'The deposit amount must be a whole number between 200,000 and 500,000 CNY.');
+  btn.disabled = !valid;
+  return valid;
+}
+
+// ── Screen -1: 下单失败告知 demo (4 failure scenarios + pass, Paypaz-provided copy) ──
+const ORDER_FAIL_MSGS = {
+  duplicate: {
+    en: 'You have a deposit order in progress. Please complete it before starting a new one.',
+    zh: '您有一笔入金订单正在处理中，请完成后再发起。',
+  },
+  mismatch: {
+    en: 'Does not meet the service provider\'s requirements. Please contact support.',
+    zh: '不满足服务商要求，请联系客服。',
+  },
+  timeWindow: {
+    en: 'Service is paused for the current period. Please try again between 09:00 and 17:00.',
+    zh: '当前时段服务暂停，请于 09:00 - 17:00 再试。',
+  },
+  slotFull: {
+    en: 'Service is paused for the current period. Please try again between 09:00 and 17:00.',
+    zh: '当前时段服务暂停，请于 09:00 - 17:00 再试。',
+  },
+  quota: {
+    en: 'The service is busy. Please contact customer support or try again later.',
+    zh: '当前服务繁忙，请联系客服，稍后再试。',
+  },
+  cardStatus: {
+    en: 'The service is unavailable. Please contact customer support.',
+    zh: '当前服务不可用，请联系客服',
+  },
+  merchantDisabled: {
+    en: 'Deposit service is not available. Please contact customer support.',
+    zh: '入金服务暂未开通，请联系客服。',
+  },
+};
+
+function onCfdDeposit() {
+  if (!validateCfdAmount()) return;
+  const scenario = document.getElementById('cfd-fail-demo-select').value;
+  if (scenario === 'pass') {
+    goTo('checkout');
+    return;
+  }
+  if (scenario === 'invalidLink') {
+    goTo('invalid-link');
+    return;
+  }
+  document.getElementById('of-dialog-desc').textContent = ORDER_FAIL_MSGS[scenario][lang];
+  document.getElementById('order-fail-overlay').classList.add('show');
+  renderIcons();
+}
+function closeOrderFailDialog(e) {
+  if (e && e.target !== document.getElementById('order-fail-overlay')) return;
+  document.getElementById('order-fail-overlay').classList.remove('show');
+}
+
+// ── Screen 0: Checkout (cashier) ─────────────────────────────────────
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+  showToast(lang === 'zh' ? '已复制' : 'Copied!');
+}
+
+
+// ── Screen 1: Confirm payment + upload proof ─────────────────────────
+function onProofFileChange(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['jpg','jpeg','png','heic','webp','pdf'].includes(ext)) {
+    input.value = '';
+    showToast(lang === 'zh' ? `${file.name} 格式不支持` : `${file.name} is not a supported format`);
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    input.value = '';
+    showToast(lang === 'zh' ? `${file.name} 超过 10MB` : `${file.name} exceeds 10MB`);
+    return;
+  }
+  document.getElementById('proof-file-name').textContent = file.name;
+  document.getElementById('proof-upload-wrap').classList.add('has-file');
+  document.getElementById('proof-file-chip').classList.add('show');
+  document.getElementById('ck-confirm-btn').disabled = false;
+}
+// 演示：上传报错 toast（PRD 4.2 确认已付款并上传凭证），文件不加入
+function simulateUploadError(type) {
+  const msgs = {
+    format: { zh: 'receipt.gif 格式不支持', en: 'receipt.gif is not a supported format' },
+    size:   { zh: 'receipt.jpg 超过 10MB', en: 'receipt.jpg exceeds 10MB' },
+    fail:   { zh: '上传失败，请重试', en: 'Upload failed. Please try again.' },
+  };
+  showToast(msgs[type][lang]);
+}
+function clearProofFile(e) {
+  e.stopPropagation();
+  document.getElementById('proof-file-input').value = '';
+  document.getElementById('proof-upload-wrap').classList.remove('has-file');
+  document.getElementById('proof-file-chip').classList.remove('show');
+  document.getElementById('ck-confirm-btn').disabled = true;
+}
+function onSubmitProof() {
+  // 点击后按钮进入加载态并禁用，防止重复提交（PRD 4.2）
+  const btn = document.getElementById('ck-confirm-btn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  document.getElementById('t-ck-confirm-btn').textContent = lang === 'zh' ? '提交中…' : 'Submitting…';
+  setTimeout(() => {
+    document.getElementById('t-ck-confirm-btn').textContent = I18N[lang]['ck-confirm-btn'];
+    btn.disabled = false;
+    goTo('verifying');
+  }, 800);
+}
+
+// ── Screen 2: Verifying (demo outcome) ────────────────────────────────
+function onVerifyDemoAdvance() {
+  const outcome = document.getElementById('vf-demo-select').value;
+  if (outcome === 'success') {
+    // 平台人工确认收款的订单与正常成功一致，不向 User 展示人工处理信息（PRD 4.2）
+    goTo('success');
+  } else if (outcome === 'refunded') {
+    goTo('refunded');
+  } else if (outcome === 'failed') {
+    goTo('failed');
+  } else {
+    onVerifyDemoTimeout();
+  }
+}
+
+// ── Countdown (payment window) ───────────────────────────────────────
+let remaining = 29 * 60 + 58;
+function pad2(n) { return String(n).padStart(2, '0'); }
+function tickTimer() {
+  if (remaining <= 0) return;
+  remaining--;
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  const el = document.getElementById('ck-timer');
+  if (el) {
+    el.textContent = `${pad2(m)}:${pad2(s)}`;
+    el.classList.toggle('urgent', remaining < 300);
+  }
+  if (remaining <= 0 && document.getElementById('s-checkout').classList.contains('active')) {
+    goTo('cancelled');
+  }
+}
+setInterval(tickTimer, 1000);
+
+// ── Countdown (merchant confirmation window, on Verifying screen) ────
+let merchantRemaining = 30 * 60;
+let merchantTimedOut = false;
+function resetMerchantTimer() {
+  merchantRemaining = 30 * 60;
+  merchantTimedOut = false;
+  document.getElementById('vf-timeout-warning').style.display = 'none';
+  document.getElementById('vf-return-btn').style.display = 'none';
+  document.getElementById('vf-merchant-timer-row').style.display = 'flex';
+  const el = document.getElementById('vf-merchant-timer');
+  if (el) { el.textContent = '30:00'; el.classList.remove('urgent'); }
+  syncVerifyHeading();
+}
+function tickMerchantTimer() {
+  if (merchantTimedOut || merchantRemaining <= 0) {
+    if (!merchantTimedOut && merchantRemaining <= 0) triggerMerchantTimeout();
+    return;
+  }
+  merchantRemaining--;
+  const m = Math.floor(merchantRemaining / 60);
+  const s = merchantRemaining % 60;
+  const el = document.getElementById('vf-merchant-timer');
+  if (el) {
+    el.textContent = `${pad2(m)}:${pad2(s)}`;
+    el.classList.toggle('urgent', merchantRemaining < 300);
+  }
+  if (merchantRemaining <= 0) triggerMerchantTimeout();
+}
+function triggerMerchantTimeout() {
+  merchantTimedOut = true;
+  document.getElementById('vf-merchant-timer-row').style.display = 'none';
+  document.getElementById('vf-timeout-warning').style.display = 'flex';
+  document.getElementById('vf-return-btn').style.display = 'flex';
+  syncVerifyHeading();
+}
+function onVerifyDemoTimeout() {
+  merchantRemaining = 0;
+  triggerMerchantTimeout();
+}
+setInterval(tickMerchantTimer, 1000);
+
+// ── Toast ────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || 'Copied!';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+applyLang();
+validateCfdAmount();
+renderIcons();
+</script>
+
+</body>
+</html>
