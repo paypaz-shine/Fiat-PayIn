@@ -121,7 +121,10 @@
     .ck-warning { display: flex; gap: 8px; background: #F5F7FA; border-radius: 6px; padding: 10px 12px; }
     .ck-warning-text { font-size: 12px; color: #909399; line-height: 1.7; }
     .ck-warning.accent { background: #fdf6ec; border: 1px solid #f5dab1; }
+    /* 本次改动核对标注（2026-10-14）：黄色底色高亮新增或修改处，核对完删除此规则即可去掉 */
+    .chg { background:#FFF59D !important; box-shadow:0 0 0 3px #FFF59D; border-radius:2px; }
     .ck-warning.accent .ck-warning-text { color: #B8720C; font-weight: 500; }
+    .ck-warning.accent .ck-warning-text b { font-weight: 700; }
     .vf-timeout-text { display: flex; align-items: center; gap: 6px; color: #F56C6C; font-size: 12px; line-height: 1.6; }
 
     .result-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid #EBEEF5; }
@@ -374,6 +377,20 @@
       </div>
     </div>
 
+    <!-- 付款须知：平台固定提示 3 条 + 收款卡「开户行限制」自动生成的一条 + 收款卡「额外付款要求」（原样展示，不随语言切换）+ 超时与违规后果提示；后两项未设置时不显示，序号顺延 -->
+    <div class="ck-warning accent chg">
+      <div>
+        <div class="ck-warning-text" id="t-ck-notice-title" style="font-weight:700">Payment Notes</div>
+        <div class="ck-warning-text" id="t-ck-notice-1">1. Transfer the full order amount in one payment — the amount must <b>match exactly</b>.</div>
+        <div class="ck-warning-text" id="t-ck-notice-2">2. Only from a personal bank account <b>in your own name</b> — the payer name must match your verified name. No company accounts, cash, Alipay or WeChat Pay transfers.</div>
+        <div class="ck-warning-text" id="t-ck-notice-3">3. <b>Do not fill in</b> any transfer remark / memo.</div>
+        <div class="ck-warning-text" id="ck-card-notice">4. Transfers from bank accounts opened in Jiangsu or Zhejiang are not accepted.</div>
+        <div class="ck-warning-text" id="ck-extra-req">5. 转账成功后请保留银行回单截图，以便核验。</div>
+        <div class="ck-warning-text" id="t-ck-window-warning" style="margin-top:6px">Complete the transfer before the timer runs out, or the order is cancelled automatically.</div>
+        <div class="ck-warning-text" id="t-ck-notice-tail">Transfers that don't meet these requirements <b>cannot be credited</b>.</div>
+      </div>
+    </div>
+
     <div>
       <label class="bc-label" id="t-cp-upload-label">Payment Proof</label>
       <div class="upload-wrap" id="proof-upload-wrap">
@@ -391,13 +408,6 @@
           <div class="upload-file-remove" onclick="clearProofFile(event)"><i data-lucide="x" width="16" height="16"></i></div>
         </div>
         <input type="file" id="proof-file-input" accept=".jpg,.jpeg,.png,.heic,.webp,.pdf" style="display:none" onchange="onProofFileChange(this)">
-      </div>
-    </div>
-
-    <div class="ck-warning">
-      <div>
-        <div class="ck-warning-text" id="t-ck-window-warning">Complete the transfer within the window below, or the order is cancelled automatically.</div>
-        <div class="ck-warning-text" id="t-ck-remark-warning" style="margin-top:4px">No remark when transferring. Bank transfer only, from your own account — no cash, Alipay or WeChat Pay.</div>
       </div>
     </div>
 
@@ -468,7 +478,7 @@
         </div>
       </div>
       <div class="result-row">
-        <span class="result-key" id="t-vf-order-label">Order ID</span>
+        <span class="result-key" id="t-vf-order-label">Order No.</span>
         <div class="bank-info-value-wrap">
           <span class="bank-info-value">PZPI20260916-00231</span>
           <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
@@ -570,7 +580,7 @@
         </div>
       </div>
       <div class="result-row">
-        <span class="result-key" id="t-res-order">Order ID</span>
+        <span class="result-key" id="t-res-order">Order No.</span>
         <div class="bank-info-value-wrap">
           <span class="bank-info-value">PZPI20260916-00231</span>
           <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
@@ -625,7 +635,7 @@
         </div>
       </div>
       <div class="result-row">
-        <span class="result-key" id="t-res-rf-order">Order ID</span>
+        <span class="result-key" id="t-res-rf-order">Order No.</span>
         <div class="bank-info-value-wrap">
           <span class="bank-info-value">PZPI20260916-00231</span>
           <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
@@ -680,7 +690,7 @@
         </div>
       </div>
       <div class="result-row">
-        <span class="result-key" id="t-res-fl-order">Order ID</span>
+        <span class="result-key" id="t-res-fl-order">Order No.</span>
         <div class="bank-info-value-wrap">
           <span class="bank-info-value">PZPI20260916-00231</span>
           <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
@@ -735,7 +745,7 @@
         </div>
       </div>
       <div class="result-row">
-        <span class="result-key" id="t-res-cn-order">Order ID</span>
+        <span class="result-key" id="t-res-cn-order">Order No.</span>
         <div class="bank-info-value-wrap">
           <span class="bank-info-value">PZPI20260916-00231</span>
           <span class="copy-icon-inline" onclick="copyText('PZPI20260916-00231')"><i data-lucide="copy" width="13" height="13"></i></span>
@@ -782,10 +792,7 @@
       <div class="status-desc" id="t-il-desc">This link is invalid. Please return to the merchant and start again.</div>
     </div>
 
-    <!-- 跳转 CFD 商户在接口中传入的 returnUrl（PRD 4.2 链接无效页） -->
-    <button class="btn-cta" onclick="goTo('cfd-entry')">
-      <span id="t-il-return">Return to Merchant</span>
-    </button>
+    <!-- 签名无效或订单不存在时无法取得可信的 returnUrl，不提供「返回商户」按钮（PRD 4.2 链接无效页） -->
   </div>
 </div><!-- /s-invalid-link -->
 
@@ -827,7 +834,7 @@ const I18N = {
     'of-dialog-title': 'Deposit Request Failed',
     'of-dialog-ok': 'Got It',
     'ck-title': 'Fiat Deposit',
-    'ck-window-warning': 'Please complete the transfer as soon as possible — the order will be cancelled automatically if it times out.',
+    'ck-window-warning': 'Complete the transfer before the timer runs out, or the order is cancelled automatically.',
     'ck-amount-label': 'Amount Due',
     'ck-remaining-label': 'Time Remaining',
     'ck-order-id-label': 'Order No.',
@@ -837,7 +844,11 @@ const I18N = {
     'ck-card-no-label': 'Card Number',
     'ck-account-name-label': 'Account Name',
     'ck-order-ref-label': 'Order Reference',
-    'ck-remark-warning': 'No remark when transferring. Bank transfer only, from your own account — no cash, Alipay or WeChat Pay.',
+    'ck-notice-title': 'Payment Notes',
+    'ck-notice-1': '1. Transfer the full order amount in one payment — the amount must <b>match exactly</b>.',
+    'ck-notice-2': '2. Only from a personal bank account <b>in your own name</b> — the payer name must match your verified name. No company accounts, cash, Alipay or WeChat Pay transfers.',
+    'ck-notice-3': '3. <b>Do not fill in</b> any transfer remark / memo.',
+    'ck-notice-tail': 'Transfers that don\'t meet these requirements <b>cannot be credited</b>.',
     'ck-confirm-btn': 'I\'ve Completed the Transfer',
     'cp-title': 'Confirm Payment',
     'cp-amount-label': 'Amount',
@@ -851,7 +862,7 @@ const I18N = {
     'vf-heading': 'Processing',
     'vf-heading-timeout': 'Timed Out',
     'vf-res-amount': 'Amount',
-    'vf-order-label': 'Order ID',
+    'vf-order-label': 'Order No.',
     'vf-res-card': 'Card Number',
     'vf-res-account-name': 'Account Name',
     'vf-res-bank': 'Bank',
@@ -872,21 +883,21 @@ const I18N = {
     'res-card': 'Card Number',
     'res-account-name': 'Account Name',
     'res-bank': 'Bank',
-    'res-order': 'Order ID',
+    'res-order': 'Order No.',
     'res-time': 'Completed',
     'suc-return': 'Return to Merchant',
     'rf-title': 'Refunded',
     'rf-heading': 'Refunded',
     'rf-desc': 'This transfer didn\'t meet the service provider\'s requirements and has been refunded via the original transfer — please check.',
     'res-rf-amount': 'Refund Amount',
-    'res-rf-order': 'Order ID',
+    'res-rf-order': 'Order No.',
     'res-rf-time': 'Refunded At',
     'rf-return': 'Return to Merchant',
     'cn-title': 'Order Cancelled',
     'cn-heading': 'Cancelled',
     'cn-desc': 'This order is cancelled — please don\'t transfer any more funds. If you have any questions, please contact customer support.',
     'res-cn-amount': 'Amount',
-    'res-cn-order': 'Order ID',
+    'res-cn-order': 'Order No.',
     'res-cn-time': 'Cancelled At',
     'cn-return': 'Return to Merchant',
     'cfd-fail-demo-invalid': 'Invalid cashier link',
@@ -898,7 +909,7 @@ const I18N = {
     'fl-heading': 'Failed',
     'fl-desc': 'We couldn\'t confirm your payment and the order has been closed. Please start a new deposit; if you have already paid, please contact customer support.',
     'res-fl-amount': 'Amount',
-    'res-fl-order': 'Order ID',
+    'res-fl-order': 'Order No.',
     'res-fl-time': 'Failed At',
     'fl-return': 'Return to Merchant',
     'cfd-fail-demo-slot': 'Time-slot quota full',
@@ -906,7 +917,6 @@ const I18N = {
     'il-title': 'Invalid Link',
     'il-heading': 'Invalid Link',
     'il-desc': 'This link is invalid. Please return to the merchant and start again.',
-    'il-return': 'Return to Merchant',
   },
   zh: {
     langBtn: 'EN',
@@ -926,7 +936,7 @@ const I18N = {
     'of-dialog-title': '下单失败',
     'of-dialog-ok': '知道了',
     'ck-title': '法币入金',
-    'ck-window-warning': '请尽快完成转账，超时自动取消订单。',
+    'ck-window-warning': '请在剩余时间内完成转账，超时订单自动取消。',
     'ck-amount-label': '应付金额',
     'ck-remaining-label': '剩余时间',
     'ck-order-id-label': '订单号',
@@ -936,7 +946,11 @@ const I18N = {
     'ck-card-no-label': '卡号',
     'ck-account-name-label': '账户名',
     'ck-order-ref-label': '订单号',
-    'ck-remark-warning': '转账时请勿填写备注。仅支持本人银行卡转账，不接受现金、支付宝或微信。',
+    'ck-notice-title': '付款须知',
+    'ck-notice-1': '1. 请一次性转入订单金额，务必确保<b>金额一致</b>。',
+    'ck-notice-2': '2. 仅支持<b>本人名下</b>个人银行卡转账，付款户名须与实名一致；不接受公司账户、现金、支付宝或微信转账。',
+    'ck-notice-3': '3. <b>请勿填写</b>转账附言 / 备注。',
+    'ck-notice-tail': '不符合以上要求的转账将<b>无法入账</b>。',
     'ck-confirm-btn': '我已完成转账',
     'cp-title': '确认已付款',
     'cp-amount-label': '金额',
@@ -1005,7 +1019,6 @@ const I18N = {
     'il-title': '链接无效',
     'il-heading': '链接无效',
     'il-desc': '链接无效，请返回商户重新发起。',
-    'il-return': '返回商户',
   },
 };
 let lang = /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
@@ -1016,12 +1029,26 @@ function renderIcons() {
   }
 }
 
+// 第 4 条：按本单收款卡「开户行限制」（不接受的开户省份）自动生成中英文，未设置时不显示
+const CARD_BANK_BAN = ['江苏', '浙江'];   // 演示：本单收款卡的开户行限制
+const CARD_EXTRA_REQ = '转账成功后请保留银行回单截图，以便核验。';   // 演示：本单收款卡的额外付款要求（收款服务商自定义，原样展示）
+const PROVINCE_EN = { 北京:'Beijing', 天津:'Tianjin', 上海:'Shanghai', 重庆:'Chongqing', 河北:'Hebei', 山西:'Shanxi', 辽宁:'Liaoning', 吉林:'Jilin', 黑龙江:'Heilongjiang', 江苏:'Jiangsu', 浙江:'Zhejiang', 安徽:'Anhui', 福建:'Fujian', 江西:'Jiangxi', 山东:'Shandong', 河南:'Henan', 湖北:'Hubei', 湖南:'Hunan', 广东:'Guangdong', 海南:'Hainan', 四川:'Sichuan', 贵州:'Guizhou', 云南:'Yunnan', 陕西:'Shaanxi', 甘肃:'Gansu', 青海:'Qinghai', 内蒙古:'Inner Mongolia', 广西:'Guangxi', 西藏:'Tibet', 宁夏:'Ningxia', 新疆:'Xinjiang' };
+function bankBanText(l) {
+  if (!CARD_BANK_BAN.length) return '';
+  if (l === 'zh') return '不接受' + CARD_BANK_BAN.join('、') + '开户的银行卡转账。';
+  const en = CARD_BANK_BAN.map(p => PROVINCE_EN[p] || p);
+  return 'Transfers from bank accounts opened in ' + (en.length > 1 ? en.slice(0, -1).join(', ') + ' or ' + en[en.length - 1] : en[0]) + ' are not accepted.';
+}
 function applyLang() {
   const t = I18N[lang];
   Object.keys(t).forEach(k => {
     const el = document.getElementById('t-' + k);
-    if (el) el.textContent = t[k];
+    if (el) { if (k.indexOf('ck-notice') === 0) el.innerHTML = t[k]; else el.textContent = t[k]; }   // 付款须知含加粗关键词
   });
+  const cn = document.getElementById('ck-card-notice'), cv = bankBanText(lang);
+  if (cn) { cn.style.display = cv ? '' : 'none'; cn.textContent = cv ? '4. ' + cv : ''; }
+  const ex = document.getElementById('ck-extra-req');
+  if (ex) { ex.style.display = CARD_EXTRA_REQ ? '' : 'none'; ex.textContent = CARD_EXTRA_REQ ? (cv ? 5 : 4) + '. ' + CARD_EXTRA_REQ : ''; }
   document.querySelectorAll('.lang-btn').forEach(b => b.textContent = t.langBtn);
   syncVerifyHeading();
 }
