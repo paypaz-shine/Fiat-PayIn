@@ -139,6 +139,8 @@
     .spin-ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid transparent; border-top-color: #435DDD; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin-ring.small { border-width: 2px; }
+    /* 处理中静态图标，对齐 on-ramp 处理中样式 */
+    .proc-icon { width: 56px; height: 56px; border-radius: 50%; background: #ECEFFC; color: #435DDD; display: flex; align-items: center; justify-content: center; }
 
     .status-icon { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
     .status-icon-success { background: #f0f9eb; }
@@ -300,12 +302,11 @@
       <div class="demo-box-label"><i data-lucide="flask-conical" width="12" height="12"></i><span id="t-cfd-fail-demo-label">Prototype demo — simulate deposit request result</span></div>
       <select class="bc-input" id="cfd-fail-demo-select">
         <option value="pass" selected id="t-cfd-fail-demo-pass">Verification passed</option>
-        <option value="duplicate" id="t-cfd-fail-demo-duplicate">Duplicate order</option>
+        <option value="duplicate" id="t-cfd-fail-demo-duplicate">In-progress order limit reached</option>
         <option value="mismatch" id="t-cfd-fail-demo-mismatch">No matching card</option>
         <option value="timeWindow" id="t-cfd-fail-demo-time">Outside service hours</option>
         <option value="slotFull" id="t-cfd-fail-demo-slot">Time-slot quota full</option>
-        <option value="quota" id="t-cfd-fail-demo-quota">Merchant quota unavailable</option>
-        <option value="cardStatus" id="t-cfd-fail-demo-cardstatus">Card status abnormal</option>
+        <option value="cardStatus" id="t-cfd-fail-demo-cardstatus">Card status abnormal / Provider closed</option>
         <option value="merchantDisabled" id="t-cfd-fail-demo-merchant">Merchant fiat deposit not enabled</option>
         <option value="invalidLink" id="t-cfd-fail-demo-invalid">Invalid cashier link</option>
       </select>
@@ -386,7 +387,7 @@
         <div class="ck-warning-text" id="t-ck-notice-3">3. <b>Do not fill in</b> any transfer remark / memo.</div>
         <div class="ck-warning-text" id="ck-card-notice">4. Transfers from bank accounts opened in Jiangsu or Zhejiang are not accepted.</div>
         <div class="ck-warning-text" id="ck-extra-req">5. 转账成功后请保留银行回单截图，以便核验。</div>
-        <div class="ck-warning-text" id="t-ck-window-warning" style="margin-top:6px">Complete the transfer before the timer runs out, or the order is cancelled automatically.</div>
+        <div class="ck-warning-text" id="t-ck-window-warning" style="margin-top:6px">Please complete the transfer before the timer runs out.</div>
         <div class="ck-warning-text" id="t-ck-notice-tail">Transfers that don't meet these requirements <b>cannot be credited</b>.</div>
       </div>
     </div>
@@ -426,7 +427,7 @@
 
     <div class="demo-box" style="width:100%">
       <div class="demo-box-label"><i data-lucide="flask-conical" width="12" height="12"></i><span id="t-ck-demo-label">Prototype demo — simulate outcome</span></div>
-      <button class="btn-cta-ghost" style="height:36px" onclick="goTo('cancelled')"><span id="t-ck-demo-cancelled">Simulate Order Cancelled (Timeout)</span></button>
+      <button class="btn-cta-ghost" style="height:36px" onclick="goTo('cancelled')"><span id="t-ck-demo-cancelled">Simulate Order Cancelled (by Ops)</span></button>
     </div>
 
   </div>
@@ -449,9 +450,8 @@
   </div>
 
   <div class="centered-screen">
-    <div class="spin-wrap" id="vf-spin-icon">
-      <div class="spin-ring"></div>
-      <i data-lucide="search" width="24" height="24" style="color:#435DDD"></i>
+    <div class="proc-icon" id="vf-spin-icon" aria-hidden="true">
+      <i data-lucide="clock-3" width="26" height="26"></i>
     </div>
     <div class="status-icon status-icon-failed" id="vf-timeout-icon" style="display:none">
       <i data-lucide="clock" width="32" height="32" style="color:#F56C6C"></i>
@@ -507,8 +507,8 @@
       </div>
     </div>
 
-    <!-- 已超时状态才展示「返回商户」（PRD 4.2 查看订单状态） -->
-    <button class="btn-cta" id="vf-return-btn" style="display:none" onclick="goTo('cfd-entry')">
+    <!-- 处理中（含已超时）都展示「返回商户」 -->
+    <button class="btn-cta" id="vf-return-btn" onclick="goTo('cfd-entry')">
       <span id="t-vf-return">Return to Merchant</span>
     </button>
 
@@ -826,15 +826,14 @@ const I18N = {
     'cfd-footnote': 'You\'ll be redirected to PayPaz to complete this deposit.',
     'cfd-fail-demo-label': 'Prototype demo — simulate deposit request result',
     'cfd-fail-demo-pass': 'Verification passed',
-    'cfd-fail-demo-duplicate': 'Duplicate order',
+    'cfd-fail-demo-duplicate': 'In-progress order limit reached',
     'cfd-fail-demo-mismatch': 'No matching card',
     'cfd-fail-demo-time': 'Outside service hours',
-    'cfd-fail-demo-quota': 'Insufficient provider token balance',
-    'cfd-fail-demo-cardstatus': 'Card status abnormal',
+    'cfd-fail-demo-cardstatus': 'Card status abnormal / Provider closed',
     'of-dialog-title': 'Deposit Request Failed',
     'of-dialog-ok': 'Got It',
     'ck-title': 'Fiat Deposit',
-    'ck-window-warning': 'Complete the transfer before the timer runs out, or the order is cancelled automatically.',
+    'ck-window-warning': 'Please complete the transfer before the timer runs out.',
     'ck-amount-label': 'Amount Due',
     'ck-remaining-label': 'Time Remaining',
     'ck-order-id-label': 'Order No.',
@@ -928,15 +927,14 @@ const I18N = {
     'cfd-footnote': '提交后将跳转至 PayPaz 完成入金。',
     'cfd-fail-demo-label': '原型演示 · 模拟发起入金结果',
     'cfd-fail-demo-pass': '验证通过',
-    'cfd-fail-demo-duplicate': '重复下单',
+    'cfd-fail-demo-duplicate': '进行中订单已达上限',
     'cfd-fail-demo-mismatch': '资质不匹配（未匹配到可用收款卡）',
     'cfd-fail-demo-time': '时间窗口不满足',
-    'cfd-fail-demo-quota': '卡商代币余额不足',
-    'cfd-fail-demo-cardstatus': '卡状态异常',
+    'cfd-fail-demo-cardstatus': '卡状态异常 / 收款服务商已停业',
     'of-dialog-title': '下单失败',
     'of-dialog-ok': '知道了',
     'ck-title': '法币入金',
-    'ck-window-warning': '请在剩余时间内完成转账，超时订单自动取消。',
+    'ck-window-warning': '请在剩余时间内完成转账。',
     'ck-amount-label': '应付金额',
     'ck-remaining-label': '剩余时间',
     'ck-order-id-label': '订单号',
@@ -1095,8 +1093,8 @@ function validateCfdAmount() {
 // ── Screen -1: 下单失败告知 demo (4 failure scenarios + pass, Paypaz-provided copy) ──
 const ORDER_FAIL_MSGS = {
   duplicate: {
-    en: 'You have a deposit order in progress. Please complete it before starting a new one.',
-    zh: '您有一笔入金订单正在处理中，请完成后再发起。',
+    en: 'You already have 3 deposit orders in progress. Please complete them before starting a new one.',
+    zh: '您已有 3 笔入金订单正在处理中，请完成后再发起。',
   },
   mismatch: {
     en: 'Does not meet the service provider\'s requirements. Please contact support.',
@@ -1109,10 +1107,6 @@ const ORDER_FAIL_MSGS = {
   slotFull: {
     en: 'Service is paused for the current period. Please try again between 09:00 and 17:00.',
     zh: '当前时段服务暂停，请于 09:00 - 17:00 再试。',
-  },
-  quota: {
-    en: 'The service is busy. Please contact customer support or try again later.',
-    zh: '当前服务繁忙，请联系客服，稍后再试。',
   },
   cardStatus: {
     en: 'The service is unavailable. Please contact customer support.',
@@ -1230,9 +1224,7 @@ function tickTimer() {
     el.textContent = `${pad2(m)}:${pad2(s)}`;
     el.classList.toggle('urgent', remaining < 300);
   }
-  if (remaining <= 0 && document.getElementById('s-checkout').classList.contains('active')) {
-    goTo('cancelled');
-  }
+  // 倒计时归零只停在 00:00，订单仍为待付款、可继续上传凭证；不再自动取消（取消仅由运营在管理系统操作）
 }
 setInterval(tickTimer, 1000);
 
@@ -1243,7 +1235,6 @@ function resetMerchantTimer() {
   merchantRemaining = 30 * 60;
   merchantTimedOut = false;
   document.getElementById('vf-timeout-warning').style.display = 'none';
-  document.getElementById('vf-return-btn').style.display = 'none';
   document.getElementById('vf-merchant-timer-row').style.display = 'flex';
   const el = document.getElementById('vf-merchant-timer');
   if (el) { el.textContent = '30:00'; el.classList.remove('urgent'); }
